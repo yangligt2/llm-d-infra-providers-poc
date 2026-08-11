@@ -113,11 +113,13 @@ first lines declare metadata:
 | `gke.multinet-rdma-networks`, `gke.gib-installer` | `infra_provider=gke rdma=roce dra=none` |
 | `gke.gateway-classes` | `infra_provider=gke gateway_provider=gke` |
 | `microtest.nccl.gke-multinet` | `infra_provider=gke rdma=roce dra=none` |
+| `microtest.nccl.gke-a4x` | `infra_provider=gke rdma=roce\|ib dra=none\|nic` |
 | `microtest.nccl.gke-dra` | `infra_provider=gke rdma=roce dra=gpu-nic` |
 | `microtest.nixl.gke-dra` | `infra_provider=gke rdma=roce dra=gpu-nic` |
 
 Known gaps (contributions welcome): TPU/AMD/XPU accelerator checks, InfiniBand
-(`rdma=ib`) checks for on-prem/AKS, EKS/EFA, NCCL/NIXL micro-test variants for
-the A4X NIC-only DRA path (`dra=nic`) and for multi-networking NIXL, and deeper
+(`rdma=ib`) checks for on-prem/AKS, EKS/EFA, NIXL micro-test variants for the
+multi-networking and A4X shapes, an A4X NCCL variant for DRANET-claims clusters
+(the current one assumes `rdma-0..3` multi-network annotations), and deeper
 node health integration (NVIDIA DCGM diagnostics, Google cluster-health-scanner)
 as optional micro-tests.

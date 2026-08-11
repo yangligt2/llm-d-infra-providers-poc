@@ -45,10 +45,13 @@ Gateway mode additionally requires
 | `gke-pd-disaggregation` | check selection validated; full pass pending a Path A cluster run |
 | `gke-wide-ep-lws` | check selection validated; full pass pending a Path B cluster run |
 | `gke-a4x-pd-disaggregation` | static checks validated against a live A4X cluster (2026-08-10); DRANET slice publication flagged correctly |
+| A4X as-built multinet (`rdma=roce dra=none`, standalone) | **full pass including the two-node NCCL fabric micro-test** on a live 86-node GB200 cluster (2026-08-11): peak busbw 189.3 GB/s, 0 wrong values |
 
-Captured evidence from the 2026-08-10 runs:
-[conformance/examples/gke-gpu-standalone-pass.txt](../../conformance/examples/gke-gpu-standalone-pass.txt)
-(see [conformance/examples/](../../conformance/examples/) for how to read it).
+Captured evidence:
+[gke-gpu-standalone-pass.txt](../../conformance/examples/gke-gpu-standalone-pass.txt),
+[gke-a4x-multinet-standalone-pass.txt](../../conformance/examples/gke-a4x-multinet-standalone-pass.txt),
+[gke-a4x-nccl-all-gather-detail.txt](../../conformance/examples/gke-a4x-nccl-all-gather-detail.txt)
+(see [conformance/examples/](../../conformance/examples/) for how to read them).
 
 Run:
 

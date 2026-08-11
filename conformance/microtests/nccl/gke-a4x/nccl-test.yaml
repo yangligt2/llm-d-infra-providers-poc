@@ -1,0 +1,189 @@
+# Two-node NCCL fabric test for GKE A4X (GB200 NVL72, 4 GPUs + 4 RDMA NICs per
+# node, arm64 nodes).
+#
+# Vendored from GoogleCloudPlatform/container-engine-accelerators
+# gpudirect-rdma/nccl-test-imex-a4x.yaml (Apache 2.0, Copyright Google Inc.),
+# with names/labels prefixed llmd- and explicit pod anti-affinity added.
+#
+# A4X differences vs A3 Ultra / A4:
+#   * 4 GPUs and 4 RDMA networks (rdma-0..rdma-3) per node, not 8.
+#   * arm64 diagnostic image; gIB scripts ship inside the image.
+#   * A ComputeDomain (NVIDIA IMEX channel via DRA) spanning the two nodes is
+#     required for cross-node NVLink; NCCL uses it alongside the RoCE fabric.
+apiVersion: v1
+kind: Service
+metadata:
+  name: llmd-nccl-host-1
+spec:
+  selector:
+    name: llmd-nccl-host-1
+  clusterIP: None
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: llmd-nccl-host-2
+spec:
+  selector:
+    name: llmd-nccl-host-2
+  clusterIP: None
+---
+apiVersion: resource.nvidia.com/v1beta1
+kind: ComputeDomain
+metadata:
+  name: llmd-nccl-compute-domain
+spec:
+  numNodes: 2
+  channel:
+    resourceClaimTemplate:
+      name: llmd-nccl-compute-domain-channel
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: llmd-nccl-test-host-1
+  labels:
+    name: llmd-nccl-host-1
+    app: llmd-conformance-nccl-a4x
+  annotations:
+    networking.gke.io/default-interface: 'eth0'
+    networking.gke.io/interfaces: |
+      [
+        {"interfaceName":"eth0","network":"default"},
+        {"interfaceName":"eth2","network":"rdma-0"},
+        {"interfaceName":"eth3","network":"rdma-1"},
+        {"interfaceName":"eth4","network":"rdma-2"},
+        {"interfaceName":"eth5","network":"rdma-3"}
+      ]
+spec:
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: cloud.google.com/gke-accelerator
+            operator: In
+            values:
+            - nvidia-gb200
+          - key: kubernetes.io/arch
+            operator: In
+            values:
+            - arm64
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchLabels:
+            app: llmd-conformance-nccl-a4x
+        topologyKey: kubernetes.io/hostname
+  hostNetwork: false
+  hostPID: false
+  volumes:
+  - name: library-dir-host
+    hostPath:
+      path: /home/kubernetes/bin/nvidia
+  - name: shared-memory
+    emptyDir:
+      medium: "Memory"
+      sizeLimit: 250Gi
+  containers:
+  - image: us-docker.pkg.dev/gce-ai-infra/gpudirect-gib/nccl-plugin-gib-diagnostic-arm64:v1.1.2
+    name: test
+    volumeMounts:
+    - name: library-dir-host
+      mountPath: /usr/local/nvidia
+    - name: shared-memory
+      mountPath: /dev/shm
+    env:
+    - name: LD_LIBRARY_PATH
+      value: /usr/local/nvidia/lib64
+    resources:
+      requests:
+        cpu: 150m
+      limits:
+        nvidia.com/gpu: 4
+      claims:
+      - name: compute-domain-channel
+    command: ["/bin/bash", "-c"]
+    args:
+    - |
+      /scripts/container_entry.sh shell
+      source /usr/local/gib/scripts/set_nccl_env.sh
+      sleep infinity
+  resourceClaims:
+  - name: compute-domain-channel
+    resourceClaimTemplateName: llmd-nccl-compute-domain-channel
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: llmd-nccl-test-host-2
+  labels:
+    name: llmd-nccl-host-2
+    app: llmd-conformance-nccl-a4x
+  annotations:
+    networking.gke.io/default-interface: 'eth0'
+    networking.gke.io/interfaces: |
+      [
+        {"interfaceName":"eth0","network":"default"},
+        {"interfaceName":"eth2","network":"rdma-0"},
+        {"interfaceName":"eth3","network":"rdma-1"},
+        {"interfaceName":"eth4","network":"rdma-2"},
+        {"interfaceName":"eth5","network":"rdma-3"}
+      ]
+spec:
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: cloud.google.com/gke-accelerator
+            operator: In
+            values:
+            - nvidia-gb200
+          - key: kubernetes.io/arch
+            operator: In
+            values:
+            - arm64
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchLabels:
+            app: llmd-conformance-nccl-a4x
+        topologyKey: kubernetes.io/hostname
+  hostNetwork: false
+  hostPID: false
+  volumes:
+  - name: library-dir-host
+    hostPath:
+      path: /home/kubernetes/bin/nvidia
+  - name: shared-memory
+    emptyDir:
+      medium: "Memory"
+      sizeLimit: 250Gi
+  containers:
+  - image: us-docker.pkg.dev/gce-ai-infra/gpudirect-gib/nccl-plugin-gib-diagnostic-arm64:v1.1.2
+    name: test
+    volumeMounts:
+    - name: library-dir-host
+      mountPath: /usr/local/nvidia
+    - name: shared-memory
+      mountPath: /dev/shm
+    env:
+    - name: LD_LIBRARY_PATH
+      value: /usr/local/nvidia/lib64
+    resources:
+      requests:
+        cpu: 150m
+      limits:
+        nvidia.com/gpu: 4
+      claims:
+      - name: compute-domain-channel
+    command: ["/bin/bash", "-c"]
+    args:
+    - |
+      /scripts/container_entry.sh shell
+      source /usr/local/gib/scripts/set_nccl_env.sh
+      sleep infinity
+  resourceClaims:
+  - name: compute-domain-channel
+    resourceClaimTemplateName: llmd-nccl-compute-domain-channel

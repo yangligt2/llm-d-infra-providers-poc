@@ -24,6 +24,16 @@ figures are verbatim.
   static run against a live GKE cluster (86 GB200 nodes), dimension space
   `infra_provider=gke accelerator=gpu rdma=none dra=none router_mode=standalone`.
   Captured 2026-08-10 with the suite at its initial revision.
+* [gke-a4x-multinet-standalone-pass.txt](gke-a4x-multinet-standalone-pass.txt) -
+  fully passing run INCLUDING the two-node NCCL fabric micro-test
+  (`--microtests`) on the same A4X cluster, dimension space
+  `infra_provider=gke accelerator=gpu rdma=roce dra=none router_mode=standalone`.
+  Shows the shape-guard behavior (the A3U/A4 multinet variant SKIPs on GB200)
+  and a measured 189.3 GB/s peak bus bandwidth. Captured 2026-08-11.
+* [gke-a4x-nccl-all-gather-detail.txt](gke-a4x-nccl-all-gather-detail.txt) -
+  the full nccl-tests sweep (1K-8G) behind that micro-test's evidence line:
+  per-size algbw/busbw columns, `#wrong 0` throughout, peak 189.33 GB/s
+  (~95% of the 4x400G per-node line rate).
 
 A failing check looks like this (same cluster, `gke-optimized-baseline`
 profile, before Gateway API enablement): the indented output states the

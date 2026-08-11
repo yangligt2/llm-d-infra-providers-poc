@@ -8,7 +8,8 @@ model-server start.
 
 | Variant | Dimension space | What it runs |
 |---|---|---|
-| [gke-multinet](gke-multinet/) | `infra_provider=gke rdma=roce dra=none` | Google's two-pod `run_nccl_tests.sh` (all_gather, 1K-8G) over `rdma-0..7` multi-network annotations + gIB |
+| [gke-multinet](gke-multinet/) | `infra_provider=gke rdma=roce dra=none` | Google's two-pod `run_nccl_tests.sh` (all_gather, 1K-8G) over `rdma-0..7` multi-network annotations + gIB. Skips on GB200 shapes |
+| [gke-a4x](gke-a4x/) | `infra_provider=gke rdma=roce\|ib dra=none\|nic` | A4X/GB200 shape: 4 GPUs + `rdma-0..3` per node, arm64 image, two-node NVIDIA ComputeDomain (IMEX) claim. Skips when no GB200 nodes |
 | [gke-dra](gke-dra/) | `infra_provider=gke rdma=roce dra=gpu-nic` | Stage 1: single-node all_reduce with 8 PCIe-aligned DRA GPU+NIC claims. Stage 2: two-pod all_gather with DRA claims |
 
 ## Pass criteria
@@ -18,9 +19,12 @@ model-server start.
   detects order-of-magnitude failures (TCP fallback, missing GPUDirect), not mild
   degradation.
 
-Reference healthy peaks for eyeball comparison (Google published values, 2-node
-all_gather): A3 Ultra (8x H200, 8x400G) ~337 GB/s busbw; A4 (8x B200) ~377 GB/s
-busbw. Values below ~85% of the reference for your shape warrant investigation
+Reference healthy peaks for eyeball comparison (2-node all_gather): A3 Ultra
+(8x H200, 8x400G) ~337 GB/s busbw and A4 (8x B200) ~377 GB/s busbw (Google
+published values); A4X (4x GB200, 4x400G) 189.3 GB/s busbw measured by this
+suite on a live cluster (~95% of line rate, see
+[../../examples/](../../examples/)). Values below ~85% of the reference for
+your shape warrant investigation
 (NIC affinity, `NCCL_TESTS_SPLIT_MASK`, congested Spot fabric) even though the
 conformance floor passes.
 

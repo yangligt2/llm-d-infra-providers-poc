@@ -1,0 +1,5 @@
+# OWNERS NEEDED. Content migrated from llm-d/docs/infrastructure/providers/minikube.
+# To adopt this provider, add yourself here via PR and announce in llm-d Slack
+# #sig-installation (see GOVERNANCE.md).
+approvers: []
+reviewers: []

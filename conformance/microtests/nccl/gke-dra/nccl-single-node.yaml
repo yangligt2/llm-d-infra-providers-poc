@@ -1,0 +1,55 @@
+# Stage 1: single-node 8-GPU NCCL all_reduce with DRA-allocated GPU+NIC pairs.
+#
+# This validates that eight PCIe-aligned (GPU, mrdma NIC) claims from
+# gke-rdma-template allocate and that NCCL initializes inside the pod. Intra-node
+# collectives run over NVLink, so this stage does NOT exercise the inter-node
+# RoCE fabric; stage 2 (nccl-two-node.yaml) does.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: llmd-nccl-dra-single
+  labels:
+    app: llmd-conformance-nccl-dra
+spec:
+  restartPolicy: Never
+  # DRA claims carry no nvidia.com/gpu extended resource, so GKE does not inject
+  # the GPU taint toleration automatically; add it explicitly.
+  tolerations:
+  - key: nvidia.com/gpu
+    operator: Exists
+    effect: NoSchedule
+  containers:
+  - name: nccl-test
+    image: us-docker.pkg.dev/gce-ai-infra/nccl-plugin/nccl-test:latest
+    command: ["/bin/bash", "-c"]
+    args:
+      - |
+        export NCCL_DEBUG=INFO
+        /usr/local/bin/all_reduce_perf -b 8 -e 8G -f 2 -g 8 -n 100
+    resources:
+      claims:
+      - name: gpu-nic-0
+      - name: gpu-nic-1
+      - name: gpu-nic-2
+      - name: gpu-nic-3
+      - name: gpu-nic-4
+      - name: gpu-nic-5
+      - name: gpu-nic-6
+      - name: gpu-nic-7
+  resourceClaims:
+  - name: gpu-nic-0
+    resourceClaimTemplateName: gke-rdma-template
+  - name: gpu-nic-1
+    resourceClaimTemplateName: gke-rdma-template
+  - name: gpu-nic-2
+    resourceClaimTemplateName: gke-rdma-template
+  - name: gpu-nic-3
+    resourceClaimTemplateName: gke-rdma-template
+  - name: gpu-nic-4
+    resourceClaimTemplateName: gke-rdma-template
+  - name: gpu-nic-5
+    resourceClaimTemplateName: gke-rdma-template
+  - name: gpu-nic-6
+    resourceClaimTemplateName: gke-rdma-template
+  - name: gpu-nic-7
+    resourceClaimTemplateName: gke-rdma-template

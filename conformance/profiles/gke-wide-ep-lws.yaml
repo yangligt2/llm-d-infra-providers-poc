@@ -1,0 +1,12 @@
+# Conformance profile: wide-ep-lws guide on GKE via the multi-networking + gIB
+# path (Path B). The guide's GKE overlay uses networking.gke.io/interfaces pod
+# annotations (rdma-0..rdma-7), gIB host mounts, and set_nccl_env.sh.
+guide: wide-ep-lws
+dimensions:
+  infra_provider: gke
+  accelerator: gpu
+  rdma: roce
+  dra: none
+  router_mode: gateway
+  gateway_provider: gke
+  model_server: vllm

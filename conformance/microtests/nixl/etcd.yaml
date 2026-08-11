@@ -1,0 +1,33 @@
+# Single-instance etcd for nixlbench peer coordination. nixlbench requires an
+# etcd endpoint when using network backends (UCX/UCCL); both benchmark ranks
+# register under the "xferbench" prefix. The pod is disposable: it is created
+# and deleted per run, so no stale-key cleanup is needed.
+apiVersion: v1
+kind: Service
+metadata:
+  name: llmd-nixl-etcd
+spec:
+  selector:
+    app: llmd-nixl-etcd
+  ports:
+  - name: client
+    port: 2379
+    targetPort: 2379
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: llmd-nixl-etcd
+  labels:
+    app: llmd-nixl-etcd
+spec:
+  restartPolicy: Never
+  containers:
+  - name: etcd
+    image: quay.io/coreos/etcd:v3.5.18
+    command:
+    - /usr/local/bin/etcd
+    - --listen-client-urls=http://0.0.0.0:2379
+    - --advertise-client-urls=http://0.0.0.0:2379
+    ports:
+    - containerPort: 2379

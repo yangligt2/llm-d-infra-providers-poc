@@ -1,0 +1,6 @@
+# Root maintainers: repository structure, conformance framework, cross-provider consistency.
+# Provider sub-folders are owned by their own OWNERS files (see GOVERNANCE.md).
+approvers:
+- yangligt2   # placeholder for the PoC; replace at repo bootstrap
+reviewers:
+- yangligt2

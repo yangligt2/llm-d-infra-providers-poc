@@ -1,0 +1,105 @@
+# Pod-to-pod NIXL transfer benchmark (GKE DRA/DRANET variant).
+#
+# Two identical pods on distinct nodes each claim one PCIe-aligned
+# (gpu.nvidia.com, mrdma.google.com) device pair via gke-rdma-template and run
+# nixlbench coordinated through etcd (rank roles auto-assign; rank 0 acts as
+# target, rank 1 as initiator). op_type READ mirrors llm-d's disaggregation
+# data path: the decode pod pulls KV cache from the prefill pod with one-sided
+# RDMA reads.
+#
+# REPLACE_NIXLBENCH_IMAGE is substituted by check.sh from
+# LLMD_NIXLBENCH_IMAGE. There is no official published nixlbench image; build
+# one with benchmark/nixlbench/contrib/build.sh from github.com/ai-dynamo/nixl.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: llmd-nixlbench-1
+  labels:
+    app: llmd-conformance-nixl
+spec:
+  restartPolicy: Never
+  tolerations:
+  - key: nvidia.com/gpu
+    operator: Exists
+    effect: NoSchedule
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchLabels:
+            app: llmd-conformance-nixl
+        topologyKey: kubernetes.io/hostname
+  containers:
+  - name: nixlbench
+    image: REPLACE_NIXLBENCH_IMAGE
+    securityContext:
+      capabilities:
+        add: ["IPC_LOCK", "SYS_RESOURCE"]
+    env:
+    # GKE RoCE fabrics require relaxed reachability; same setting the llm-d
+    # pd-disaggregation GKE overlay applies to vLLM pods.
+    - name: UCX_IB_ROCE_REACHABILITY_MODE
+      value: "all"
+    command: ["/bin/bash", "-c"]
+    args:
+    - |
+      set -x
+      nixlbench \
+        --etcd_endpoints http://llmd-nixl-etcd:2379 \
+        --backend UCX \
+        --initiator_seg_type VRAM \
+        --target_seg_type VRAM \
+        --op_type READ \
+        --check_consistency
+    resources:
+      claims:
+      - name: gpu-nic
+  resourceClaims:
+  - name: gpu-nic
+    resourceClaimTemplateName: gke-rdma-template
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: llmd-nixlbench-2
+  labels:
+    app: llmd-conformance-nixl
+spec:
+  restartPolicy: Never
+  tolerations:
+  - key: nvidia.com/gpu
+    operator: Exists
+    effect: NoSchedule
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchLabels:
+            app: llmd-conformance-nixl
+        topologyKey: kubernetes.io/hostname
+  containers:
+  - name: nixlbench
+    image: REPLACE_NIXLBENCH_IMAGE
+    securityContext:
+      capabilities:
+        add: ["IPC_LOCK", "SYS_RESOURCE"]
+    env:
+    - name: UCX_IB_ROCE_REACHABILITY_MODE
+      value: "all"
+    command: ["/bin/bash", "-c"]
+    args:
+    - |
+      set -x
+      nixlbench \
+        --etcd_endpoints http://llmd-nixl-etcd:2379 \
+        --backend UCX \
+        --initiator_seg_type VRAM \
+        --target_seg_type VRAM \
+        --op_type READ \
+        --check_consistency
+    resources:
+      claims:
+      - name: gpu-nic
+  resourceClaims:
+  - name: gpu-nic
+    resourceClaimTemplateName: gke-rdma-template

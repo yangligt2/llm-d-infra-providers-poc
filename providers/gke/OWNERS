@@ -1,0 +1,6 @@
+# Owners of the GKE provider sub-folder. Full review/approval authority for
+# changes under providers/gke/ (see GOVERNANCE.md).
+approvers:
+- yangligt2   # placeholder for the PoC; replace with GKE platform maintainers
+reviewers:
+- yangligt2

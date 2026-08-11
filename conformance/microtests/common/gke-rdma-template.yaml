@@ -1,0 +1,22 @@
+# ResourceClaimTemplate requesting one GPU and one RDMA NIC aligned on the same
+# PCIe root. Identical to the template consumed by the llm-d pd-disaggregation
+# GKE overlay (guides/pd-disaggregation/modelserver/components/gke-rdma/), so
+# passing this micro-test validates exactly what the guide will claim.
+apiVersion: resource.k8s.io/v1
+kind: ResourceClaimTemplate
+metadata:
+  name: gke-rdma-template
+spec:
+  spec:
+    devices:
+      requests:
+      - name: gpu
+        exactly:
+          deviceClassName: gpu.nvidia.com
+          count: 1
+      - name: nic
+        exactly:
+          deviceClassName: mrdma.google.com
+          count: 1
+      constraints:
+      - matchAttribute: "resource.kubernetes.io/pcieRoot"

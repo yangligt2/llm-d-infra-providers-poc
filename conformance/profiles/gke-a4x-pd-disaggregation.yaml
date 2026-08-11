@@ -1,0 +1,12 @@
+# Conformance profile: pd-disaggregation guide on GKE A4X (GB200). The guide's
+# gke/a4x overlay uses DRANET mrdma.google.com NIC claims (gke-rdma-nic-template)
+# with GPUs managed by the classic NVIDIA device plugin, over native InfiniBand.
+guide: pd-disaggregation
+dimensions:
+  infra_provider: gke
+  accelerator: gpu
+  rdma: ib
+  dra: nic
+  router_mode: gateway
+  gateway_provider: gke
+  model_server: vllm

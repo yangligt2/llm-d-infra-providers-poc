@@ -1,0 +1,38 @@
+# Dimension vocabulary for the llm-d Infra Conformance Suite.
+#
+# These axes follow the declarative dimensions used by the llm-d well-lit path
+# guides (see guides/*/guide.yaml in llm-d), so that infrastructure conformance,
+# documentation, the CI test grid, and benchmarking share the same coordinate
+# system. Changes here are coordinated with llm-d maintainers.
+#
+# A conformance PROFILE assigns one value per dimension. A conformance CHECK
+# declares constraints over a subset of dimensions; it applies to a profile when
+# every constraint is satisfied (unconstrained dimensions match any value).
+dimensions:
+  # Kubernetes infrastructure provider. "base" means provider-agnostic.
+  infra_provider: [base, gke, eks, aks, openshift, openshift-aws, digitalocean, minikube, baremetal]
+
+  # Accelerator family. gpu = NVIDIA data-center GPUs.
+  accelerator: [gpu, amd, xpu, hpu, tpu/v6, tpu/v7, cpu]
+
+  # Inter-node fast fabric available to workload pods.
+  rdma: [none, roce, ib]
+
+  # How accelerators/NICs are exposed to pods.
+  #   none    - classic device plugin (e.g. nvidia.com/gpu resource requests)
+  #   gpu     - GPUs via Dynamic Resource Allocation (ResourceClaims)
+  #   nic     - RDMA NICs via DRA, GPUs via classic device plugin
+  #             (e.g. GKE A4X/GB200: mrdma.google.com claims + nvidia.com/gpu)
+  #   gpu-nic - GPUs and RDMA NICs both via DRA (e.g. GKE DRANET mrdma.google.com),
+  #             claimable on a shared PCIe root for GPUDirect
+  dra: [none, gpu, nic, gpu-nic]
+
+  # llm-d router deployment mode.
+  router_mode: [standalone, gateway]
+
+  # Gateway control plane, when router_mode=gateway.
+  gateway_provider: [none, gke, istio, agentgateway, envoy-ai-gateway]
+
+  # Model server. Informational for infra checks today (no check constrains on
+  # it), kept for alignment with guide dimensions.
+  model_server: [vllm, sglang, trtllm]

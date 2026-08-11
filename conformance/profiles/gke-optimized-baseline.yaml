@@ -1,0 +1,11 @@
+# Conformance profile: optimized-baseline guide on GKE (aggregated serving,
+# no RDMA required). Matches the guide's GKE dimension defaults.
+guide: optimized-baseline
+dimensions:
+  infra_provider: gke
+  accelerator: gpu
+  rdma: none
+  dra: none
+  router_mode: gateway
+  gateway_provider: gke
+  model_server: vllm

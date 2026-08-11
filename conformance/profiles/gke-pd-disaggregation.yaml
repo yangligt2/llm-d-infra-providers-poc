@@ -1,0 +1,12 @@
+# Conformance profile: pd-disaggregation guide on GKE via the DRA + managed
+# DRANET path (Path A). The guide's GKE overlay attaches a ResourceClaimTemplate
+# requesting gpu.nvidia.com + mrdma.google.com devices on the same PCIe root.
+guide: pd-disaggregation
+dimensions:
+  infra_provider: gke
+  accelerator: gpu
+  rdma: roce
+  dra: gpu-nic
+  router_mode: gateway
+  gateway_provider: gke
+  model_server: vllm

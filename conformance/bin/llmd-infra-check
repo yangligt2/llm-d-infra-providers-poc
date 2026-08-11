@@ -1,0 +1,206 @@
+#!/usr/bin/env bash
+# llmd-infra-check - dimension-aware llm-d infrastructure conformance runner.
+#
+# Filters the executable checks under conformance/checks/ and
+# conformance/microtests/ by a dimension profile, runs the applicable ones
+# against the current kubeconfig context, and reports a pass/fail checklist.
+#
+# Usage:
+#   llmd-infra-check --profile <file> [options]
+#   llmd-infra-check --dim infra_provider=gke --dim accelerator=gpu ... [options]
+#
+# Options:
+#   --profile FILE    Profile YAML assigning one value per dimension
+#   --dim KEY=VALUE   Set/override a single dimension (repeatable)
+#   --microtests      Also run active fabric micro-tests (creates pods!)
+#   --only PATTERN    Run only checks whose id matches the glob (repeatable)
+#   --list            List selected checks without executing them
+#   -v, --verbose     Print check output even on PASS
+#   -h, --help        This help
+#
+# Check exit code contract: 0 = PASS, 77 = SKIP, anything else = FAIL.
+#
+# Portability note: written for bash 3.2+ (no associative arrays), so it runs
+# on stock macOS as well as Linux.
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+PROFILE=""
+RUN_MICROTESTS=0
+LIST_ONLY=0
+VERBOSE=0
+declare -a ONLY=()
+declare -a CLI_DIMS=()
+
+# Dimensions as newline-separated key=value entries; later entries override.
+DIMS_KV=""
+set_dim() { DIMS_KV="${DIMS_KV}
+$1=$2"; }
+get_dim() {
+  printf '%s\n' "$DIMS_KV" | awk -F= -v k="$1" \
+    '$1 == k { v = substr($0, length(k) + 2) } END { print v }'
+}
+dim_keys() { printf '%s\n' "$DIMS_KV" | awk -F= 'NF && $1 != "" { print $1 }' | sort -u; }
+
+usage() { sed -n '2,20p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --profile) PROFILE="$2"; shift 2 ;;
+    --dim) CLI_DIMS+=("$2"); shift 2 ;;
+    --microtests) RUN_MICROTESTS=1; shift ;;
+    --only) ONLY+=("$2"); shift 2 ;;
+    --list) LIST_ONLY=1; shift ;;
+    -v|--verbose) VERBOSE=1; shift ;;
+    -h|--help) usage; exit 0 ;;
+    *) echo "unknown argument: $1" >&2; usage >&2; exit 2 ;;
+  esac
+done
+
+# --- Load profile ------------------------------------------------------------
+if [ -n "$PROFILE" ]; then
+  [ -f "$PROFILE" ] || { echo "profile not found: $PROFILE" >&2; exit 2; }
+  while IFS='=' read -r key val; do
+    [ -n "$key" ] && set_dim "$key" "$val"
+  done < <(awk '
+    /^dimensions:/ { f=1; next }
+    f && /^[^[:space:]#]/ { f=0 }
+    f && $1 ~ /^[a-z_]+:$/ {
+      key=$1; sub(/:$/, "", key)
+      val=$2; gsub(/"/, "", val)
+      if (val != "") print key "=" val
+    }' "$PROFILE")
+fi
+for kv in ${CLI_DIMS[@]+"${CLI_DIMS[@]}"}; do
+  set_dim "${kv%%=*}" "${kv#*=}"
+done
+if [ -z "$(dim_keys)" ]; then
+  echo "no dimensions given: use --profile and/or --dim (see --help)" >&2
+  exit 2
+fi
+
+# --- Validate dimensions against the vocabulary -------------------------------
+VOCAB_FILE="$ROOT/dimensions.yaml"
+for key in $(dim_keys); do
+  allowed="$(awk -v k="$key:" '
+    /^dimensions:/ { f=1; next }
+    f && $1 == k { line=$0; sub(/^[^[]*\[/, "", line); sub(/\].*$/, "", line)
+                   gsub(/[",]/, " ", line); print line; exit }' "$VOCAB_FILE")"
+  if [ -z "$allowed" ]; then
+    echo "unknown dimension key: $key (see $VOCAB_FILE)" >&2; exit 2
+  fi
+  val="$(get_dim "$key")"
+  found=0
+  for v in $allowed; do [ "$v" = "$val" ] && found=1; done
+  if [ "$found" -ne 1 ]; then
+    echo "invalid value '$val' for dimension '$key' (allowed: $allowed)" >&2
+    exit 2
+  fi
+done
+
+# --- Discover checks ----------------------------------------------------------
+declare -a CHECKS=()
+while IFS= read -r f; do
+  head -n 3 "$f" | grep -q '^# conformance-check' && CHECKS+=("$f")
+done < <(find "$ROOT/checks" "$ROOT/microtests" -name '*.sh' -type f 2>/dev/null | sort)
+
+hdr() { # hdr <file> <field>
+  sed -n "s/^# $2:[[:space:]]*//p" "$1" | head -n 1
+}
+
+# matches <file> -> 0 if every "# dimensions:" constraint is satisfied.
+# Constraint token syntax: key=value1|value2|...
+MISMATCH_REASON=""
+matches() {
+  local f="$1" tokens tok key vals v pv ok
+  tokens="$(sed -n 's/^# dimensions:[[:space:]]*//p' "$f" | tr '\n' ' ')"
+  for tok in $tokens; do
+    key="${tok%%=*}"; vals="${tok#*=}"
+    pv="$(get_dim "$key")"
+    if [ -z "$pv" ]; then
+      MISMATCH_REASON="dimension '$key' not set in profile"; return 1
+    fi
+    ok=0
+    IFS='|' read -r -a varr <<< "$vals"
+    for v in "${varr[@]}"; do [ "$v" = "$pv" ] && ok=1; done
+    if [ "$ok" -ne 1 ]; then
+      MISMATCH_REASON="requires $key=$vals, profile has $key=$pv"; return 1
+    fi
+  done
+  return 0
+}
+
+only_match() { # only_match <id>
+  [ ${#ONLY[@]} -eq 0 ] && return 0
+  local pat
+  for pat in "${ONLY[@]}"; do
+    # shellcheck disable=SC2254
+    case "$1" in $pat) return 0 ;; esac
+  done
+  return 1
+}
+
+# --- Run ----------------------------------------------------------------------
+export LLMD_CONFORMANCE_ROOT="$ROOT"
+for key in $(dim_keys); do
+  export "LLMD_DIM_$(echo "$key" | tr '[:lower:]' '[:upper:]')=$(get_dim "$key")"
+done
+
+profile_str=""
+for key in $(dim_keys); do
+  profile_str="$profile_str$key=$(get_dim "$key") "
+done
+echo "llm-d infra conformance"
+echo "dimensions: $profile_str"
+echo
+
+npass=0 nfail=0 nskip=0 ndefer=0 nfiltered=0
+declare -a FAILED_IDS=()
+
+for f in ${CHECKS[@]+"${CHECKS[@]}"}; do
+  id="$(hdr "$f" id)"; desc="$(hdr "$f" description)"
+  type="$(hdr "$f" type)"; [ -n "$type" ] || type=static
+  only_match "$id" || continue
+  if ! matches "$f"; then
+    nfiltered=$((nfiltered + 1))
+    [ "$VERBOSE" -eq 1 ] && echo "[  --  ] $id (not applicable: $MISMATCH_REASON)"
+    continue
+  fi
+  if [ "$type" = "microtest" ] && [ "$RUN_MICROTESTS" -ne 1 ]; then
+    ndefer=$((ndefer + 1))
+    echo "[ DEFER] $id - $desc (micro-test; re-run with --microtests)"
+    continue
+  fi
+  if [ "$LIST_ONLY" -eq 1 ]; then
+    echo "[ TODO ] $id - $desc (${type})"
+    continue
+  fi
+  out="$(mktemp)"
+  rc=0
+  bash "$f" >"$out" 2>&1 || rc=$?
+  case "$rc" in
+    0)  echo "[ PASS ] $id - $desc"; npass=$((npass + 1))
+        [ "$VERBOSE" -eq 1 ] && sed 's/^/         /' "$out" ;;
+    77) echo "[ SKIP ] $id - $desc"; nskip=$((nskip + 1))
+        sed 's/^/         /' "$out" ;;
+    *)  echo "[ FAIL ] $id - $desc"; nfail=$((nfail + 1)); FAILED_IDS+=("$id")
+        sed 's/^/         /' "$out" ;;
+  esac
+  rm -f "$out"
+done
+
+[ "$LIST_ONLY" -eq 1 ] && exit 0
+
+echo
+echo "summary: $npass passed, $nfail failed, $nskip skipped, $ndefer deferred, $nfiltered not applicable"
+if [ "$nfail" -gt 0 ]; then
+  echo "failed checks: ${FAILED_IDS[*]}"
+  echo "result: cluster is NOT ready for the requested llm-d dimension profile"
+  exit 1
+fi
+if [ "$ndefer" -gt 0 ]; then
+  echo "result: static checks passed; run with --microtests for fabric-level validation"
+else
+  echo "result: cluster conforms to the requested llm-d dimension profile"
+fi

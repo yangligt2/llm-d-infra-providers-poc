@@ -1,0 +1,188 @@
+# Stage 2: two-node NCCL test over the RoCE fabric with DRANET-allocated NICs.
+#
+# Derived from Google's gpudirect-rdma two-pod NCCL test (nccl-test-a4.yaml,
+# Apache 2.0), with GKE multi-networking annotations replaced by DRA resource
+# claims (gke-rdma-template: GPU + mrdma.google.com NIC on a shared PCIe root),
+# following Google's DRANET NCCL validation walkthrough for A3 Ultra/A4/B200.
+#
+# Prerequisite: the diagnostic image drives mpirun via
+# /usr/local/gib/scripts/run_nccl_tests.sh, which is a HOST mount populated by
+# the nccl-rdma-installer DaemonSet (gpudirect-rdma/nccl-rdma-installer.yaml in
+# GoogleCloudPlatform/container-engine-accelerators). Apply that DaemonSet even
+# on DRA/DRANET clusters before running this stage; check.sh verifies and
+# reports if it is missing.
+apiVersion: v1
+kind: Service
+metadata:
+  name: llmd-nccl-dra-host-1
+spec:
+  selector:
+    name: llmd-nccl-dra-host-1
+  clusterIP: None
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: llmd-nccl-dra-host-2
+spec:
+  selector:
+    name: llmd-nccl-dra-host-2
+  clusterIP: None
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: llmd-nccl-dra-test-host-1
+  labels:
+    name: llmd-nccl-dra-host-1
+    app: llmd-conformance-nccl-dra-2node
+spec:
+  tolerations:
+  - key: nvidia.com/gpu
+    operator: Exists
+    effect: NoSchedule
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchLabels:
+            app: llmd-conformance-nccl-dra-2node
+        topologyKey: kubernetes.io/hostname
+  volumes:
+    - name: library-dir-host
+      hostPath:
+        path: /home/kubernetes/bin/nvidia
+    - name: gib
+      hostPath:
+        path: /home/kubernetes/bin/gib
+    - name: shared-memory
+      emptyDir:
+        medium: "Memory"
+        sizeLimit: 250Gi
+  containers:
+    - image: us-docker.pkg.dev/gce-ai-infra/gpudirect-gib/nccl-plugin-gib-diagnostic:v1.1.1
+      name: test
+      volumeMounts:
+        - name: library-dir-host
+          mountPath: /usr/local/nvidia
+        - name: gib
+          mountPath: /usr/local/gib
+        - name: shared-memory
+          mountPath: /dev/shm
+      env:
+        - name: LD_LIBRARY_PATH
+          value: /usr/local/nvidia/lib64
+      resources:
+        requests:
+          cpu: 150m
+        claims:
+        - name: gpu-nic-0
+        - name: gpu-nic-1
+        - name: gpu-nic-2
+        - name: gpu-nic-3
+        - name: gpu-nic-4
+        - name: gpu-nic-5
+        - name: gpu-nic-6
+        - name: gpu-nic-7
+      command: ["/bin/bash", "-c"]
+      args:
+        - |
+          /scripts/container_entry.sh shell
+          source /usr/local/gib/scripts/set_nccl_env.sh
+          sleep infinity
+  resourceClaims:
+  - name: gpu-nic-0
+    resourceClaimTemplateName: gke-rdma-template
+  - name: gpu-nic-1
+    resourceClaimTemplateName: gke-rdma-template
+  - name: gpu-nic-2
+    resourceClaimTemplateName: gke-rdma-template
+  - name: gpu-nic-3
+    resourceClaimTemplateName: gke-rdma-template
+  - name: gpu-nic-4
+    resourceClaimTemplateName: gke-rdma-template
+  - name: gpu-nic-5
+    resourceClaimTemplateName: gke-rdma-template
+  - name: gpu-nic-6
+    resourceClaimTemplateName: gke-rdma-template
+  - name: gpu-nic-7
+    resourceClaimTemplateName: gke-rdma-template
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: llmd-nccl-dra-test-host-2
+  labels:
+    name: llmd-nccl-dra-host-2
+    app: llmd-conformance-nccl-dra-2node
+spec:
+  tolerations:
+  - key: nvidia.com/gpu
+    operator: Exists
+    effect: NoSchedule
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchLabels:
+            app: llmd-conformance-nccl-dra-2node
+        topologyKey: kubernetes.io/hostname
+  volumes:
+    - name: library-dir-host
+      hostPath:
+        path: /home/kubernetes/bin/nvidia
+    - name: gib
+      hostPath:
+        path: /home/kubernetes/bin/gib
+    - name: shared-memory
+      emptyDir:
+        medium: "Memory"
+        sizeLimit: 250Gi
+  containers:
+    - image: us-docker.pkg.dev/gce-ai-infra/gpudirect-gib/nccl-plugin-gib-diagnostic:v1.1.1
+      name: test
+      volumeMounts:
+        - name: library-dir-host
+          mountPath: /usr/local/nvidia
+        - name: gib
+          mountPath: /usr/local/gib
+        - name: shared-memory
+          mountPath: /dev/shm
+      env:
+        - name: LD_LIBRARY_PATH
+          value: /usr/local/nvidia/lib64
+      resources:
+        requests:
+          cpu: 150m
+        claims:
+        - name: gpu-nic-0
+        - name: gpu-nic-1
+        - name: gpu-nic-2
+        - name: gpu-nic-3
+        - name: gpu-nic-4
+        - name: gpu-nic-5
+        - name: gpu-nic-6
+        - name: gpu-nic-7
+      command: ["/bin/bash", "-c"]
+      args:
+        - |
+          /scripts/container_entry.sh shell
+          source /usr/local/gib/scripts/set_nccl_env.sh
+          sleep infinity
+  resourceClaims:
+  - name: gpu-nic-0
+    resourceClaimTemplateName: gke-rdma-template
+  - name: gpu-nic-1
+    resourceClaimTemplateName: gke-rdma-template
+  - name: gpu-nic-2
+    resourceClaimTemplateName: gke-rdma-template
+  - name: gpu-nic-3
+    resourceClaimTemplateName: gke-rdma-template
+  - name: gpu-nic-4
+    resourceClaimTemplateName: gke-rdma-template
+  - name: gpu-nic-5
+    resourceClaimTemplateName: gke-rdma-template
+  - name: gpu-nic-6
+    resourceClaimTemplateName: gke-rdma-template
+  - name: gpu-nic-7
+    resourceClaimTemplateName: gke-rdma-template

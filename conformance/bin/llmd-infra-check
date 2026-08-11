@@ -181,7 +181,13 @@ for f in ${CHECKS[@]+"${CHECKS[@]}"}; do
   bash "$f" >"$out" 2>&1 || rc=$?
   case "$rc" in
     0)  echo "[ PASS ] $id - $desc"; npass=$((npass + 1))
-        [ "$VERBOSE" -eq 1 ] && sed 's/^/         /' "$out" ;;
+        # Always surface the check's one-line evidence summary; full output
+        # only in verbose mode.
+        if [ "$VERBOSE" -eq 1 ]; then
+          sed 's/^/         /' "$out"
+        else
+          grep '^ok: ' "$out" | sed 's/^/         /' || true
+        fi ;;
     77) echo "[ SKIP ] $id - $desc"; nskip=$((nskip + 1))
         sed 's/^/         /' "$out" ;;
     *)  echo "[ FAIL ] $id - $desc"; nfail=$((nfail + 1)); FAILED_IDS+=("$id")

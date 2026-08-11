@@ -1,0 +1,16 @@
+llm-d infra conformance
+dimensions: accelerator=gpu dra=none infra_provider=gke rdma=none router_mode=standalone 
+
+[ PASS ] cluster.api-reachable - kubectl can reach the cluster API server
+         ok: context 'gke_example-project_us-central1_gpu-cluster' reachable
+[ PASS ] cluster.kubernetes-version - Kubernetes server version meets the llm-d floor (>= 1.29; 1.33+ recommended)
+         ok: server version 1.36.2
+[ PASS ] cluster.nodes-ready - All nodes are Ready
+         ok: 102 nodes Ready
+[ PASS ] accelerator.gpu.device-plugin - NVIDIA GPUs are schedulable via the device plugin (nvidia.com/gpu allocatable)
+         ok: 344 allocatable nvidia.com/gpu across the cluster
+[ PASS ] gke.accelerator-node-labels - GKE nodes expose cloud.google.com/gke-accelerator labels
+         ok: 86 accelerator node(s): nvidia-gb200 
+
+summary: 5 passed, 0 failed, 0 skipped, 0 deferred, 12 not applicable
+result: cluster conforms to the requested llm-d dimension profile

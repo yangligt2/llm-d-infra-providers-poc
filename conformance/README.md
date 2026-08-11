@@ -46,6 +46,9 @@ conformance/bin/llmd-infra-check \
 conformance/bin/llmd-infra-check --profile ... --list
 ```
 
+Sample output from real clusters, including how to read the evidence lines and
+failure diagnostics: [examples/](examples/).
+
 The runner targets the current kubeconfig context. Static checks are read-only.
 Micro-tests create and delete pods/services/claims in the `llmd-conformance`
 namespace (override with `LLMD_NCCL_NAMESPACE` / `LLMD_NIXL_NAMESPACE`) and
@@ -62,6 +65,7 @@ bin/llmd-infra-check      runner
 lib/common.sh             helpers sourced by every check
 dimensions.yaml           dimension vocabulary (shared with llm-d guides)
 profiles/                 dimension profiles, one per guide+platform target
+examples/                 captured runs from real clusters (sanitized)
 checks/common/            provider-agnostic static checks
 checks/<provider>/        provider-contributed static checks
 microtests/nccl/          two-node NCCL fabric tests

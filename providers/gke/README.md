@@ -46,6 +46,10 @@ Gateway mode additionally requires
 | `gke-wide-ep-lws` | check selection validated; full pass pending a Path B cluster run |
 | `gke-a4x-pd-disaggregation` | static checks validated against a live A4X cluster (2026-08-10); DRANET slice publication flagged correctly |
 
+Captured evidence from the 2026-08-10 runs:
+[conformance/examples/gke-gpu-standalone-pass.txt](../../conformance/examples/gke-gpu-standalone-pass.txt)
+(see [conformance/examples/](../../conformance/examples/) for how to read it).
+
 Run:
 
 ```bash

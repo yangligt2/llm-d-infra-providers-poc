@@ -7,7 +7,7 @@ llm-d, qualified against the [conformance suite](../conformance/README.md).
 
 | Provider | Status |
 |---|---|
-| [gke](gke/) | pilot provider: docs, scripts, AI skill, conformance profiles |
+| [gke](gke/) | pilot provider: docs, scripts, AI skill, conformance profiles; external Terraform and AI-skill links ([accelerated-platforms](https://github.com/GoogleCloudPlatform/accelerated-platforms)) |
 | [aks](aks/) | migrated docs; owners needed |
 | [digitalocean](digitalocean/) | migrated docs; owners needed |
 | [minikube](minikube/) | migrated docs; owners needed |

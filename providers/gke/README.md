@@ -20,7 +20,7 @@ resources manage the same NICs and must not be combined):
 | A: GPU DRA + managed DRANET | `rdma=roce dra=gpu-nic` | pd-disaggregation (`gke` overlay) | [scripts/provision-dra-dranet.sh](scripts/provision-dra-dranet.sh) |
 | B: multi-networking + gIB | `rdma=roce dra=none` | wide-ep-lws (`gke` overlay) | [scripts/provision-multinet-gib.sh](scripts/provision-multinet-gib.sh) |
 | A4X (GB200) | `rdma=ib dra=nic` | pd-disaggregation (`gke/a4x` overlay) | AI Hypercomputer docs (script TODO) |
-| No RDMA (aggregated serving) | `rdma=none dra=none` | optimized-baseline and other single-node guides | any standard GPU cluster |
+| No RDMA (aggregated serving) | `rdma=none dra=none` | optimized-baseline and other single-node guides | any standard GPU cluster; [Terraform example](https://github.com/GoogleCloudPlatform/accelerated-platforms/tree/main/platforms/gke/base/use-cases/inference-ref-arch/examples/llmd/optimized-baseline) |
 
 Gateway mode additionally requires
 [scripts/gateway-prereqs.sh](scripts/gateway-prereqs.sh) (Gateway API enablement
@@ -35,7 +35,17 @@ Gateway mode additionally requires
    capacity (`ASSUME_YES=1` for CI).
 3. **AI skill** - [skills/create-gke-infra-llm-d/](skills/create-gke-infra-llm-d/),
    an interactive agent skill with IAM preflight, guardrails, and validation,
-   anchored in the same sources of truth as the scripts.
+   anchored in the same sources of truth as the scripts. Google also maintains
+   a broader agent skills collection in
+   [GoogleCloudPlatform/accelerated-platforms](https://github.com/GoogleCloudPlatform/accelerated-platforms/tree/main/skills)
+   (external; not qualified against the conformance suite).
+4. **Infrastructure as Code (Terraform)** - the
+   [llmd/optimized-baseline example](https://github.com/GoogleCloudPlatform/accelerated-platforms/tree/main/platforms/gke/base/use-cases/inference-ref-arch/examples/llmd/optimized-baseline)
+   of the GKE inference reference architecture in
+   GoogleCloudPlatform/accelerated-platforms (external). Targets the
+   optimized-baseline guide (`rdma=none dra=none`, single-node serving).
+   Qualification against the `gke-optimized-baseline` conformance profile is
+   pending a `llmd-infra-check` run on a Terraform-provisioned cluster.
 
 ## Qualification against the conformance suite
 

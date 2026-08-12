@@ -20,9 +20,14 @@ desired="$(echo "$row" | awk '{print $3}')"
 ready="$(echo "$row" | awk '{print $5}')"
 [ "$desired" = "$ready" ] || fail "DaemonSet $ns/$name: $ready of $desired pods ready"
 
-# vLLM 0.11.0+ requires NCCL 2.27 => gIB 1.10+ (llm-d GKE guide). The installer
-# image version is the observable proxy for the gIB version on the node.
+# Floors from requirements.yaml (gke.gib-installer, per the llm-d GKE guide).
+# The installer image version is the observable proxy for the gIB version on
+# the node.
+min_gib="$(req gke.gib-installer min_gib)"
+min_nccl="$(req gke.gib-installer min_nccl)"
+vllm_from="$(req gke.gib-installer vllm_from)"
+installer_ref="$(req gke.gib-installer installer_ref)"
 img="$(k get daemonset -n "$ns" "$name" -o jsonpath='{.spec.template.spec.initContainers[0].image}{" "}{.spec.template.spec.containers[0].image}' 2>/dev/null || true)"
 echo "installer images: $img"
-echo "note: vLLM 0.11.0+ needs gIB 1.10+ (NCCL 2.27); use at least the installer from container-engine-accelerators PR #511"
+echo "note: vLLM ${vllm_from}+ needs gIB ${min_gib}+ (NCCL ${min_nccl}); use at least the installer from ${installer_ref}"
 pass "DaemonSet $ns/$name ready on $desired node(s)"

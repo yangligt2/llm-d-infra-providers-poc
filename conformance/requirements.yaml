@@ -1,0 +1,33 @@
+# Requirement floors for conformance checks - the single local copy of every
+# version number transcribed from llm-d documentation. Check scripts read these
+# via the req() helper in lib/common.sh; checks must not hardcode floors.
+#
+# Blocks are keyed by check id. `source:` records where each value was
+# transcribed from: a path relative to the llm-d repository at `llmd_ref`
+# below, or an absolute URL when the value is owned by external documentation.
+# When bumping llmd_ref, re-verify every value in this file against its source.
+#
+# Format constraint: two levels only (check id at column 0, `key: value` at one
+# indent level), no trailing comments on value lines - req() parses this with
+# awk, not a YAML library.
+
+# llm-d ref the `source:` paths and values were last verified against.
+llmd_ref: 901164e0
+
+cluster.kubernetes-version:
+  min: "1.29"
+  recommended: "1.33"
+  reason: "v1.33+ has complete sidecar init container support (restartPolicy: Always)"
+  source: docs/infrastructure/README.md
+
+gke.dranet-devices:
+  min_gke: "1.34.1-gke.1829001"
+  reason: "managed DRANET (DeviceClass mrdma.google.com) is auto-installed from this GKE version"
+  source: https://cloud.google.com/kubernetes-engine/docs/concepts/about-dranet
+
+gke.gib-installer:
+  min_gib: "1.10"
+  min_nccl: "2.27"
+  vllm_from: "0.11.0"
+  installer_ref: https://github.com/GoogleCloudPlatform/container-engine-accelerators/pull/511
+  source: docs/infrastructure/providers/gke/README.md

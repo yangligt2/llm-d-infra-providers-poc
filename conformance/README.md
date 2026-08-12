@@ -64,6 +64,7 @@ Exit code: 0 when every selected check passes (skips do not fail the run),
 bin/llmd-infra-check      runner
 lib/common.sh             helpers sourced by every check
 dimensions.yaml           dimension vocabulary (shared with llm-d guides)
+requirements.yaml         version floors transcribed from llm-d docs, with provenance
 profiles/                 dimension profiles, one per guide+platform target
 examples/                 captured runs from real clusters (sanitized)
 checks/common/            provider-agnostic static checks
@@ -92,8 +93,13 @@ first lines declare metadata:
 * Exit 0 = PASS, 77 = SKIP (runtime-determined inapplicability, with a message
   explaining what is missing), anything else = FAIL.
 * The runner exports `LLMD_CONFORMANCE_ROOT` and one `LLMD_DIM_<KEY>` per
-  profile dimension. Source `lib/common.sh` for `pass`/`fail`/`skip`/`dim`
+  profile dimension. Source `lib/common.sh` for `pass`/`fail`/`skip`/`dim`/`req`
   helpers.
+* Version floors and similar numeric requirements live in
+  [requirements.yaml](requirements.yaml), keyed by check id and read with
+  `req <check-id> <key>`; do not hardcode them in check scripts. Each entry
+  cites the llm-d documentation it was transcribed from, and `llmd_ref` pins
+  the llm-d revision the values were last verified against.
 * Static checks must be read-only against the cluster. Micro-tests must confine
   created objects to the conformance namespace, prefix names with `llmd-`, and
   delete everything they created on exit (including on failure paths).

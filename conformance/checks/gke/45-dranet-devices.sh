@@ -8,9 +8,10 @@ set -euo pipefail
 
 require_cmd kubectl
 
-# 1. DRANET DeviceClass (auto-installed by GKE 1.34.1-gke.1829001+).
+# 1. DRANET DeviceClass (auto-installed from the GKE version in requirements.yaml).
+min_gke="$(req gke.dranet-devices min_gke)"
 k get deviceclass mrdma.google.com >/dev/null 2>&1 \
-  || fail "DeviceClass mrdma.google.com not found (managed DRANET not active; check GKE version and node labels)"
+  || fail "DeviceClass mrdma.google.com not found (managed DRANET not active; requires GKE ${min_gke}+; check GKE version and node labels)"
 
 slices="$(k get resourceslices -o json 2>/dev/null || true)"
 [ -n "$slices" ] || fail "could not list ResourceSlices"

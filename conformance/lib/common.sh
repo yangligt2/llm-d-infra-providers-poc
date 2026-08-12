@@ -29,6 +29,20 @@ dim() {
   printf '%s' "${!key-}"
 }
 
+# req <check-id> <key> - read a requirement floor from requirements.yaml.
+# Fails the check when the key is absent: a check must not invent its own
+# floor, and a silently empty value must not weaken a comparison.
+req() {
+  local file="$LLMD_CONFORMANCE_ROOT/requirements.yaml" val
+  val="$(awk -v id="$1:" -v k="$2:" '
+    /^[^[:space:]]/ { in_block = ($1 == id); next }
+    in_block && $1 == k {
+      sub(/^[[:space:]]*[^:]*:[[:space:]]*/, ""); gsub(/"/, ""); print; exit
+    }' "$file")"
+  [ -n "$val" ] || fail "requirement $1.$2 not found in $file"
+  printf '%s' "$val"
+}
+
 # k - kubectl against the current context, never prompting.
 k() { kubectl --request-timeout=20s "$@"; }
 

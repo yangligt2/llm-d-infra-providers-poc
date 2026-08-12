@@ -88,6 +88,18 @@ first lines declare metadata:
 # type: microtest        # omit for static checks
 ```
 
+* Check filenames follow `NN-name.sh`. The numeric prefix only sets execution
+  and report order: the runner discovers checks with `find | sort`, so order is
+  lexicographic by full path. The prefix carries no other meaning and never
+  appears in output - check identity is the `id:` header (used by `--only`,
+  the summary, and `requirements.yaml`). Because paths sort directory-first,
+  prefixes are scoped per directory: every provider directory has the full
+  `00`-`99` range independent of `checks/common/` and other providers.
+  Convention in `checks/common/`: `00`-`09` cluster basics, `10`-`19` nodes,
+  `20`-`29` accelerator, `30`-`39` gateway; provider directories start at `40`
+  so a combined report reads in one ascending sequence. Leave gaps when
+  numbering so later checks can be inserted without renaming; renumbering is
+  always safe.
 * `dimensions:` tokens are `key=value1|value2` constraints, ANDed together;
   a check with no `dimensions:` line applies to every profile.
 * Exit 0 = PASS, 77 = SKIP (runtime-determined inapplicability, with a message
